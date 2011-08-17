@@ -1,0 +1,86 @@
+Scrip 1
+
+Description: FlowIOUpdate
+Condition: On Transaction
+Action: User Defined
+Template: Global template: Blank
+Stage: TransactionCreate
+
+Custom action preparation code:
+
+return 0 unless ($self->TicketObj->FirstCustomFieldValue('FlowIO-id') != "");
+return 1;
+
+Custom action cleanup code:
+
+use LWP::UserAgent;
+use CGI::Simple;
+
+my $q = new CGI::Simple;
+
+my $taskid = $self->TicketObj->FirstCustomFieldValue('FlowIO-id');
+my $url = "http://medeco.flow.io/api/v10.05/task/".$taskid.".json?";
+# For now, Ronald is always the updater
+my $params = "user_id=100";
+
+my $transfield = $self->TransactionObj->Field;
+my $transvalue = $self->TransactionObj->NewValue;
+
+# Set the task text to the new Subject value
+if ($transfield eq "Subject") {
+  $params .= "&task_text=";
+  $params .= $self->TicketObj->Id."+-+";
+  $params .= $q->url_encode($transvalue);
+}
+# Based on Priority, set the task_type_id
+if ($transfield eq "Priority") {
+  $params .= "&task_type_id=";
+  if ($transvalue >= 96) { $params .= "75"; }
+  elsif ($transvalue >= 86) { $params .= "76"; }
+  elsif ($transvalue >= 76) { $params .= "77"; }
+  elsif ($transvalue >= 56) { $params .= "78"; }
+  elsif ($transvalue >= 41) { $params .= "79"; }
+  elsif ($transvalue >= 21) { $params .= "80"; }
+  elsif ($transvalue >= 1) { $params .= "81"; }
+  else { $params .= "82"; }
+}
+# Based on the status, set the column
+if ($transfield eq "Status") {
+  $params .= "&col_id=";
+  if ($transvalue eq "new") { $params .= "100"; }
+  elsif ($transvalue eq "open") { $params .= "109"; }
+  elsif ($transvalue eq "stalled") { $params .= "112"; }
+  elsif ($transvalue eq "resolved") { $params .= "103"; }
+  elsif ($transvalue eq "rejected") { $params .= "103"; }
+  elsif ($transvalue eq "deleted") { $params .= "103"; }
+  elsif ($transvalue eq "nextactive") { $params .= "110"; }
+  elsif ($transvalue eq "active") { $params .= "111"; }
+  elsif ($transvalue eq "waiting") { $params .= "112"; }
+  else { $params .= "100"; }
+  # Special task status settings
+  if (($transvalue eq "deleted") && ($self->TransactionObj->OldValue ne "deleted")) { $params .= "&task_status=D"; }
+  elsif (($transvalue eq "waiting") && ($self->TransactionObj->OldValue ne "waiting")) { $params .= "&task_status=B"; }
+  elsif (($transvalue ne "deleted") && ($self->TransactionObj->OldValue eq "deleted")) { $params .= "&task_status=U"; }
+  elsif (($transvalue ne "waiting") && ($self->TransactionObj->OldValue eq "waiting")) { $params .= "&task_status="; }
+}
+
+$url .= $params;
+
+my $transtype = $self->TransactionObj->Type;
+
+open (MYFILE, '>>/tmp/flowio.txt');
+print MYFILE "Scrip 13\n";
+print MYFILE "$url\n";
+print MYFILE "Object $transfield\n";
+print MYFILE "Value  $transvalue\n";
+print MYFILE "Transtype: $transtype\n";
+close (MYFILE); 
+
+my $req = HTTP::Request->new('POST',$url);
+$req->header('X-Flow-Authentication' => "57160659b9dc6599bdcb");
+
+my $ua = LWP::UserAgent->new;
+my $result = $ua->request($req);
+
+return 1;
+

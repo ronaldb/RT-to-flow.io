@@ -1,0 +1,58 @@
+Scrip 2
+
+Description: FlowIOCreate
+Condition: On Create
+Action: User Defined
+Template: Global template: Blank
+Stage: TransactionCreate
+
+Custom action preparation code:
+
+return 1;
+
+Custom action cleanup code:
+
+use CGI::Simple;
+use LWP::UserAgent;
+
+my $q = new CGI::Simple;
+
+my $projectid = "22";
+my $userid = "100";
+my $tasktypeid = "82";
+my $url = "http://medeco.flow.io/api/v10.05/task.json?";
+
+my $ticket = $self->TicketObj;
+my $idno = $ticket->Id();
+my $subject = $ticket->Subject;
+my $flowsubject = $idno." - ".$subject;
+
+my $params = "project_id=";
+$params .= $q->url_encode($projectid);
+$params .= "&user_id=";
+$params .= $q->url_encode($userid);
+$params .= "&task_type_id=";
+$params .= $q->url_encode($tasktypeid);
+$params .= "&task_text=";
+$params .= $q->url_encode($flowsubject);
+
+$url .= $params;
+
+my $req = HTTP::Request->new( 'POST', $url);
+$req->header('X-Flow-Authentication' => "57160659b9dc6599bdcb");
+
+my $ua = LWP::UserAgent->new;
+my $result = $ua->request( $req );
+
+my $response = $result->content;
+$response =~ s/\": \"/\" => \"/g;
+$response =~ s/\": /\" => /g;
+my $var1 = eval $response;
+my $taskid = $var1->{ 'task_id' };
+
+my $cf = RT::CustomField->new( $RT::SystemUser );
+$cf->LoadByName( Name => 'FlowIO-ID' );
+
+$self->TicketObj->AddCustomFieldValue( Field => $cf, Value => $taskid );
+
+return 1;
