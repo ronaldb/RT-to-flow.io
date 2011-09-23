@@ -18,13 +18,15 @@ use CGI::Simple;
 
 my $q = new CGI::Simple;
 
-my $taskid = $self->TicketObj->FirstCustomFieldValue('FlowIO-id');
-my $url = "http://medeco.flow.io/api/v10.05/task/".$taskid.".json?";
+my $taskid = "0";
 # For now, Ronald is always the updater
 my $params = "user_id=100";
 
+my $transtype = $self->TransactionObj->Type;
 my $transfield = $self->TransactionObj->Field;
 my $transvalue = $self->TransactionObj->NewValue;
+
+$taskid = $self->TicketObj->FirstCustomFieldValue('FlowIO-id');
 
 # Set the task text to the new Subject value
 if ($transfield eq "Subject") {
@@ -63,13 +65,20 @@ if ($transfield eq "Status") {
   elsif (($transvalue ne "deleted") && ($self->TransactionObj->OldValue eq "deleted")) { $params .= "&task_status=U"; }
   elsif (($transvalue ne "waiting") && ($self->TransactionObj->OldValue eq "waiting")) { $params .= "&task_status="; }
 }
+#If Merge, then we need to delete the merged ticket
+if (($transfield eq "MergedInto") && ($transtype = "AddLink")) {
+  my $oldticket = RT::Ticket->new(RT::SystemUser);
+  $oldticket->LoadById($self->TransactionObj->ObjectId);
+  $taskid = $oldticket->FirstCustomFieldValue('FlowIO-id');
+  $params .= "&task_status=D";
+}
 
+my $url = "http://medeco.flow.io/api/v10.05/task/".$taskid.".json?";
 $url .= $params;
 
-my $transtype = $self->TransactionObj->Type;
-
 open (MYFILE, '>>/tmp/flowio.txt');
-print MYFILE "Scrip 13\n";
+print MYFILE localtime();
+print MYFILE "\nScrip 13\n";
 print MYFILE "$url\n";
 print MYFILE "Object $transfield\n";
 print MYFILE "Value  $transvalue\n";
@@ -77,7 +86,7 @@ print MYFILE "Transtype: $transtype\n";
 close (MYFILE); 
 
 my $req = HTTP::Request->new('POST',$url);
-$req->header('X-Flow-Authentication' => "57160659b9dc6599bdcb");
+$req->header('X-Flow-Authentication' => "597bb768df10e703adbd");
 
 my $ua = LWP::UserAgent->new;
 my $result = $ua->request($req);
