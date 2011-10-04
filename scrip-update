@@ -25,13 +25,14 @@ my $params = "user_id=100";
 my $transtype = $self->TransactionObj->Type;
 my $transfield = $self->TransactionObj->Field;
 my $transvalue = $self->TransactionObj->NewValue;
+my $RTId = $self->TicketObj->Id;
 
 $taskid = $self->TicketObj->FirstCustomFieldValue('FlowIO-id');
 
 # Set the task text to the new Subject value
 if ($transfield eq "Subject") {
   $params .= "&task_text=";
-  $params .= $self->TicketObj->Id."+-+";
+  $params .= $RTId."+-+";
   $params .= $q->url_encode($transvalue);
 }
 # Based on Priority, set the task_type_id
@@ -69,27 +70,20 @@ if ($transfield eq "Status") {
 if (($transfield eq "MergedInto") && ($transtype = "AddLink")) {
   my $oldticket = RT::Ticket->new(RT::SystemUser);
   $oldticket->LoadById($self->TransactionObj->ObjectId);
-  $taskid = $oldticket->FirstCustomFieldValue('FlowIO-id');
-  $params .= "&task_status=D";
+  if ($oldticket->Id ne $RTId) {
+    $taskid = $oldticket->FirstCustomFieldValue('FlowIO-id');
+    $params .= "&task_status=D";
+  }
 }
 
+# Build URL from task id and parameters
 my $url = "http://medeco.flow.io/api/v10.05/task/".$taskid.".json?";
 $url .= $params;
 
-open (MYFILE, '>>/tmp/flowio.txt');
-print MYFILE localtime();
-print MYFILE "\nScrip 13\n";
-print MYFILE "$url\n";
-print MYFILE "Object $transfield\n";
-print MYFILE "Value  $transvalue\n";
-print MYFILE "Transtype: $transtype\n";
-close (MYFILE); 
-
 my $req = HTTP::Request->new('POST',$url);
-$req->header('X-Flow-Authentication' => "597bb768df10e703adbd");
+$req->header('X-Flow-Authentication' => "xxxxxxxxxxxxxxxxxxxx");
 
 my $ua = LWP::UserAgent->new;
 my $result = $ua->request($req);
 
 return 1;
-
