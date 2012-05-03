@@ -1,0 +1,8 @@
+Scrip 1
+
+Description: FlowIOUpdate
+Condition: On Transaction
+Action: User Defined
+Template: Global template: Blank
+Stage: TransactionCreate
+

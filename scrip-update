@@ -1,18 +1,3 @@
-Scrip 1
-
-Description: FlowIOUpdate
-Condition: On Transaction
-Action: User Defined
-Template: Global template: Blank
-Stage: TransactionCreate
-
-Custom action preparation code:
-
-return 0 unless ($self->TicketObj->FirstCustomFieldValue('FlowIO-id') != "");
-return 1;
-
-Custom action cleanup code:
-
 use LWP::UserAgent;
 use CGI::Simple;
 
