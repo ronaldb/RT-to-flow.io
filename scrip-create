@@ -1,17 +1,3 @@
-Scrip 2
-
-Description: FlowIOCreate
-Condition: On Create
-Action: User Defined
-Template: Global template: Blank
-Stage: TransactionCreate
-
-Custom action preparation code:
-
-return 1;
-
-Custom action cleanup code:
-
 use CGI::Simple;
 use LWP::UserAgent;
 

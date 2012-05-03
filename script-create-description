@@ -1,0 +1,8 @@
+Scrip 2
+
+Description: FlowIOCreate
+Condition: On Create
+Action: User Defined
+Template: Global template: Blank
+Stage: TransactionCreate
+
