@@ -3,16 +3,31 @@ use LWP::UserAgent;
 
 my $q = new CGI::Simple;
 
+# 22 = RT in medeco.flow.io
 my $projectid = "22";
+# 100 = rbruintjes in medeco.flow.io
 my $userid = "100";
 my $tasktypeid = "82";
 my $url = "http://medeco.flow.io/api/v10.05/task.json?";
 
+# The name of the ticket is the RT issue number plus the subject
 my $ticket = $self->TicketObj;
 my $idno = $ticket->Id();
 my $subject = $ticket->Subject;
 my $flowsubject = $idno." - ".$subject;
 
+# Ticket priority determines the type of ticket 
+my $priority = $ticket->Priority();
+if ($priority >= 96) { $tasktypeid = "75"; }
+elsif ($priority >= 86) { $tasktypeid = "76"; }
+elsif ($priority >= 76) { $tasktypeid = "77"; }
+elsif ($priority >= 56) { $tasktypeid = "78"; }
+elsif ($priority >= 41) { $tasktypeid = "79"; }
+elsif ($priority >= 21) { $tasktypeid = "80"; }
+elsif ($priority >= 1) { $tasktypeid = "81"; }
+else { $tasktypeid = "82"; }
+
+# Build the parameter values for the URL
 my $params = "project_id=";
 $params .= $q->url_encode($projectid);
 $params .= "&user_id=";
@@ -24,18 +39,21 @@ $params .= $q->url_encode($flowsubject);
 
 $url .= $params;
 
+# Create the request and send it off
 my $req = HTTP::Request->new( 'POST', $url);
-$req->header('X-Flow-Authentication' => "57160659b9dc6599bdcb");
+$req->header('X-Flow-Authentication' => "xxxxxxxxxxxxxxxxxxxx");
 
 my $ua = LWP::UserAgent->new;
 my $result = $ua->request( $req );
 
+# Capture the response
 my $response = $result->content;
 $response =~ s/\": \"/\" => \"/g;
 $response =~ s/\": /\" => /g;
 my $var1 = eval $response;
 my $taskid = $var1->{ 'task_id' };
 
+# Store the task_id as FlowIO-ID
 my $cf = RT::CustomField->new( $RT::SystemUser );
 $cf->LoadByName( Name => 'FlowIO-ID' );
 

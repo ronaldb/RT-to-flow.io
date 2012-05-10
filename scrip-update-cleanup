@@ -1,6 +1,16 @@
 use LWP::UserAgent;
 use CGI::Simple;
 
+my %members = ("22", 100,
+               "37", 128,
+               "35", 131,
+               "83", 219,
+               "81", 227,
+               "251", 336,
+               "85", 538,
+               "9774", 4079);
+my $membersRef = \%members;
+
 my $q = new CGI::Simple;
 
 my $taskid = "0";
@@ -59,6 +69,12 @@ if (($transfield eq "MergedInto") && ($transtype = "AddLink")) {
     $taskid = $oldticket->FirstCustomFieldValue('FlowIO-id');
     $params .= "&task_status=D";
   }
+}
+
+# Based on the Owner, set the assigned users
+if ($transfield eq "Owner") {
+  $params .= "&user_ids=";
+  $params .= $$membersRef{$transvalue}
 }
 
 # Build URL from task id and parameters
